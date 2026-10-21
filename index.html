@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fontaine Games</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💧</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#13284f;--panel:#1b3567;--line:#2f4f86;--text:#eef4fc;--muted:#b4c6e3;--accent:#8cc4f0;--gold:#d8b45c}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:'Nunito',system-ui,sans-serif;color:var(--text);background:var(--bg);min-height:100vh;line-height:1.55}
+h1,h2,h3,.logo{font-family:'Cinzel',Georgia,serif;letter-spacing:.03em}
+a{color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+header{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem clamp(1rem,5vw,3rem);border-bottom:1px solid var(--line)}
+.logo{font-size:1.25rem;font-weight:700;text-decoration:none}
+.logo span{color:var(--gold)}
+nav{display:flex;gap:1.4rem}
+nav a{text-decoration:none;color:var(--muted);font-weight:600}
+nav a:hover{color:var(--text)}
+.hero{text-align:center;padding:clamp(2.5rem,7vw,4.5rem) 1.5rem 2rem}
+.hero h1{font-size:clamp(2rem,6vw,3.4rem);margin:0;font-weight:600}
+.hero .sub{max-width:32rem;margin:.8rem auto 1.5rem;color:var(--muted)}
+.btn{display:inline-block;border:0;cursor:pointer;font:700 1rem 'Nunito',sans-serif;text-decoration:none;padding:.7rem 1.4rem;border-radius:10px;color:#13284f;background:var(--gold)}
+.btn:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+main{max-width:70rem;margin:0 auto;padding:1rem clamp(1rem,5vw,3rem) 4rem}
+section{margin-top:2.5rem}
+h2{font-size:1.5rem;margin:0 0 .3rem;font-weight:600}
+.lead{margin:0 0 1.2rem;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
+.card{display:flex;flex-direction:column;text-decoration:none;overflow:hidden;border-radius:10px;background:var(--panel);border:1px solid var(--line)}
+.card:hover{border-color:var(--accent)}
+.card .art{aspect-ratio:1/1;display:grid;place-items:center;font-size:2.6rem;background:#223f77;padding:.6rem}
+.card .art img{width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45));transition:transform .2s}
+button.card{font:inherit;color:inherit;text-align:left;cursor:pointer;padding:0}
+button.card:hover .art img{transform:scale(1.04)}
+.tag{display:inline-block;margin-top:.5rem;font-size:.75rem;font-weight:700;letter-spacing:.04em;color:var(--gold);border:1px solid var(--line);border-radius:999px;padding:.05rem .6rem}
+.card .meta{padding:.8rem 1rem 1rem}
+.card h3{margin:0 0 .2rem;font-size:1rem}
+.card p{margin:0;font-size:.9rem;color:var(--muted)}
+.empty{border-style:dashed;justify-content:center;text-align:center;padding:2rem 1rem;color:var(--muted)}
+.player{border:1px solid var(--line);border-radius:10px;padding:1.3rem;background:var(--panel)}
+.row{display:flex;flex-wrap:wrap;gap:1rem;align-items:end}
+label{display:block;font-weight:700;font-size:.9rem;margin-bottom:.3rem}
+select,input[type=file]{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.55rem .75rem;max-width:100%}
+.note{font-size:.88rem;color:var(--muted);margin:1rem 0 0}
+#stage{display:none;position:fixed;inset:0;z-index:20;background:#000}
+#stage.on{display:block}
+#game{width:100%;height:100%;position:relative;z-index:2}
+#status{position:absolute;inset:0;z-index:1;display:grid;place-content:center;text-align:center;padding:2rem;color:#b4c6e3;font-size:1.1rem;background:#13284f}
+#status small{display:block;margin-top:.6rem;font-size:.9rem}
+#exit{position:fixed;top:.7rem;right:.7rem;z-index:30;display:none}
+#exit.on{display:block}
+footer{text-align:center;padding:1.5rem 1rem;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="#top">Fontaine <span>Games</span></a>
+  <nav><a href="#games">Games</a><a href="#library">My Library</a><a href="#play">Play a ROM</a></nav>
+</header>
+
+<div class="hero" id="top">
+  <h1>Fontaine Games</h1>
+  <p class="sub">A small, curated collection. No junk, no clutter. Now with the Pokémon handhelds.</p>
+  <a class="btn" href="#games">Browse games</a>
+  <a class="btn ghost" href="#play">Play your own ROM</a>
+</div>
+
+<main>
+  <section id="games">
+    <h2>The Collection</h2>
+    <p class="lead">Hand-picked and ad-free. Click a cover to start playing.</p>
+    <div class="grid" id="shelf"></div>
+  </section>
+
+  <section id="library">
+    <h2>My Library</h2>
+    <p class="lead">Games you add here stay saved in this browser, so you only add them once.</p>
+    <div class="player">
+      <div class="row">
+        <div>
+          <label for="addrom">Add games</label>
+          <input type="file" id="addrom" multiple>
+        </div>
+        <div>
+          <label for="addsys">System</label>
+          <select id="addsys">
+            <option value="auto">Auto-detect</option>
+            <option value="gba">Game Boy Advance</option>
+            <option value="gb">Game Boy / Color</option>
+            <option value="nds">Nintendo DS</option>
+            <option value="nes">NES</option>
+            <option value="snes">SNES</option>
+            <option value="n64">Nintendo 64</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="grid" id="lib" style="margin-top:1rem"></div>
+  </section>
+
+  <section id="play">
+    <h2>Play a ROM</h2>
+    <p class="lead">Pick a system, choose a game file from your device, and play instantly.</p>
+    <div class="player">
+      <div class="row">
+        <div>
+          <label for="sys">System</label>
+          <select id="sys">
+            <option value="gba">Game Boy Advance (.gba)</option>
+            <option value="gb">Game Boy / Color (.gb, .gbc)</option>
+            <option value="nds">Nintendo DS (.nds)</option>
+            <option value="nes">NES (.nes)</option>
+            <option value="snes">SNES (.sfc, .smc)</option>
+            <option value="n64">Nintendo 64 (.z64, .n64)</option>
+          </select>
+        </div>
+        <div>
+          <label for="rom">Game file</label>
+          <input type="file" id="rom">
+        </div>
+        <button class="btn" id="go" disabled>Start game</button>
+      </div>
+      <p class="note">Files load straight from your device and never get uploaded anywhere. Save data stays in this browser. Only use games you own.</p>
+    </div>
+  </section>
+</main>
+
+<footer>Fontaine Games &middot; A fan-made site, not affiliated with HoYoverse or Nintendo.<br><small id="check"></small></footer>
+
+<div id="stage"><div id="status">Loading emulator…<br><small>Needs internet. If this stays here for more than 20 seconds, tap Exit game.</small></div><div id="game"></div></div>
+<button class="btn" id="exit">Exit game</button>
+
+<script>
+/* ---- Your games. rom = file in the roms/ folder, img = cover in covers/ ---- */
+const GAMES = [
+  { title:"Pokémon Red",        desc:"Kanto, where it all began.",          sys:"gb",  rom:"roms/pokemon-red-version-usa-europe-sgb-enhanced.zip",        img:"covers/red.jpg" },
+  { title:"Pokémon Blue",       desc:"Kanto, the other version.",           sys:"gb",  rom:"roms/pokemon-blue-version-usa-europe-sgb-enhanced.zip",       img:"covers/blue.jpg" },
+  { title:"Pokémon Yellow",     desc:"Special Pikachu Edition.",            sys:"gb",  rom:"roms/pokemon-yellow-version-special-pikachu-edition-usa-europe-cgb-sgb-enhanced.zip",     img:"covers/yellow.jpg" },
+  { title:"Pokémon Ruby",       desc:"Hoenn, with Team Magma.",             sys:"gba", rom:"roms/pokemon-ruby-version-usa.zip",      img:"covers/ruby.jpg" },
+  { title:"Pokémon Sapphire",   desc:"Hoenn, with Team Aqua.",              sys:"gba", rom:"roms/pokemon-sapphire-version-usa.zip",  img:"covers/sapphire.jpg" },
+  { title:"Pokémon Emerald",    desc:"The definitive Hoenn adventure.",     sys:"gba", rom:"roms/pokemon-emerald-version-usa-europe.zip",   img:"covers/emerald.jpg" },
+  { title:"Pokémon FireRed",    desc:"Kanto, remade for the GBA.",          sys:"gba", rom:"roms/pokemon-firered-version-usa.zip",   img:"covers/firered.jpg" },
+  { title:"Pokémon LeafGreen",  desc:"Kanto, remade for the GBA.",          sys:"gba", rom:"roms/pokemon-leafgreen-version-usa.zip", img:"covers/leafgreen.jpg" },
+  { title:"The Legend of Zelda",                   desc:"The original Hyrule adventure.",        sys:"nes",  rom:"roms/legend-of-zelda-the-usa-rev-1.zip",       img:"covers/zelda1.jpg" },
+  { title:"Zelda II: The Adventure of Link",       desc:"Side-scrolling Zelda.",                 sys:"nes",  rom:"roms/zelda-ii-the-adventure-of-link-usa.zip",      img:"covers/zelda2.jpg" },
+  { title:"Zelda: A Link to the Past",             desc:"A SNES classic.",                       sys:"snes", rom:"roms/legend-of-zelda-the-a-link-to-the-past-usa.zip",       img:"covers/alttp.jpg" },
+  { title:"Zelda: Link's Awakening",               desc:"Koholint Island on Game Boy.",          sys:"gb",   rom:"roms/legend-of-zelda-the-link-s-awakening-v1-2-u.zip",        img:"covers/links.jpg" },
+  { title:"Zelda: Ocarina of Time",                desc:"The N64 masterpiece.",                  sys:"n64",  rom:"roms/legend-of-zelda-the-ocarina-of-time-u-v1-2.zip",     img:"covers/ocarina.jpg" },
+  { title:"Super Mario Bros. 2",                   desc:"Pluck veggies, save Subcon.",           sys:"nes",  rom:"roms/super-mario-bros-2-usa-rev-1.zip",        img:"covers/smb2.jpg" },
+  { title:"Super Mario Bros. 3",                   desc:"Raccoon tails and airships.",           sys:"nes",  rom:"roms/super-mario-bros-3-usa-rev-1.zip",        img:"covers/smb3.jpg" },
+  { title:"Super Mario World",                     desc:"Yoshi's debut.",                        sys:"snes", rom:"roms/super-mario-world-u.zip",         img:"covers/smw.jpg" },
+  { title:"Super Mario Kart",                      desc:"The original kart racer.",              sys:"snes", rom:"roms/super-mario-kart-usa.zip",         img:"covers/smk.jpg" },
+  { title:"Classic NES Series: Super Mario Bros.", desc:"The 1985 original on GBA.",             sys:"gba",  rom:"roms/classic-nes-series-super-mario-bros-usa-europe.zip",  img:"covers/classicsmb.jpg" }
+];
+const SYS_LABEL = {gb:'Game Boy', gba:'Game Boy Advance', nes:'NES', snes:'SNES', n64:'Nintendo 64'};
+
+const shelf = document.getElementById('shelf');
+GAMES.forEach(g => {
+  const b = document.createElement('button');
+  b.className = 'card'; b.type = 'button';
+  b.innerHTML = '<div class="art"><img alt="" loading="lazy"></div><div class="meta"><h3></h3><p></p><span class="tag"></span></div>';
+  b.querySelector('img').src = g.img;
+  b.querySelector('img').alt = g.title + ' cover';
+  b.querySelector('h3').textContent = g.title;
+  b.querySelector('p').textContent = g.desc;
+  b.querySelector('.tag').textContent = SYS_LABEL[g.sys];
+  b.onclick = async () => {
+    try {
+      const r = await fetch(g.rom);
+      if (!r.ok) throw new Error('Could not find ' + g.rom + '. Put the game zips in the roms folder.');
+      const zb = await r.blob(); zb.name = g.rom;
+      const rm = await normalizeRom(new File([zb], g.rom));
+      launch(rm.blob, g.sys, g.title);
+    } catch (e) {
+      alert(location.protocol === 'file:'
+        ? 'Open this site through the start script (start.bat on Windows, start.command on Mac) instead of double-clicking index.html, so the games can load.'
+        : e.message);
+    }
+  };
+  shelf.appendChild(b);
+});
+
+/* ---- ROM player (EmulatorJS) ---- */
+const rom = document.getElementById('rom'), go = document.getElementById('go'),
+      sys = document.getElementById('sys'), stage = document.getElementById('stage'),
+      exitBtn = document.getElementById('exit');
+const CORES = { gba:'gba', gb:'gb', nds:'nds', nes:'nes', snes:'snes', n64:'n64' };
+
+const ROM_EXT = /\.(gba|gbc|gb|nds|nes|sfc|smc|z64|n64|v64)$/i;
+// If the file is a zip, pull the game out of it so the emulator gets a plain ROM
+async function normalizeRom(file){
+  if (!/\.zip$/i.test(file.name)) return {blob: file, name: file.name};
+  if (typeof JSZip === 'undefined') throw new Error('Zip support did not load. Check your connection and reload.');
+  const zip = await JSZip.loadAsync(file);
+  const entry = Object.values(zip.files).find(e => !e.dir && ROM_EXT.test(e.name));
+  if (!entry) throw new Error('No game file found inside ' + file.name);
+  const data = await entry.async('arraybuffer');
+  return {blob: new Blob([data]), name: entry.name.split('/').pop()};
+}
+
+rom.addEventListener('change', () => {
+  go.disabled = !rom.files.length;
+  if (rom.files[0]) sys.value = guessSystem(rom.files[0].name);
+});
+
+function launch(blob, system, name){
+  stage.classList.add('on'); exitBtn.classList.add('on');
+  document.getElementById('status').style.display = 'none';
+  const ext = {gba:'gba', gb:'gb', nds:'nds', nes:'nes', snes:'sfc', n64:'z64'}[system];
+  const isZip = /\.zip$/i.test(blob.name || '');
+  // blob: URLs have no extension, so add one after '#' so the emulator knows the file type
+  const url = URL.createObjectURL(blob) + '#' + encodeURIComponent(name) + '.' + (isZip ? 'zip' : ext);
+  const cfg = {
+    EJS_player: '#game', EJS_core: CORES[system], EJS_gameUrl: url, EJS_gameName: name,
+    EJS_pathtodata: 'https://cdn.emulatorjs.org/stable/data/', EJS_startOnLoaded: true, EJS_threads: false
+  };
+  // Run the emulator in its own iframe so nothing on this page can interfere with it
+  const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
+    '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#game{width:100%;height:100%}</style></head><body><div id="game"></div>' +
+    '<script>try{if(navigator.wakeLock)navigator.wakeLock.request=function(){return Promise.resolve({release:function(){}})}}catch(e){}\n' +
+    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];<\/script>' +
+    '<script src="' + cfg.EJS_pathtodata + 'loader.js"><\/script></body></html>';
+  const f = document.createElement('iframe');
+  f.setAttribute('allow', 'autoplay; fullscreen; gamepad');
+  f.setAttribute('allowfullscreen', '');
+  f.style.cssText = 'width:100%;height:100%;border:0;background:#000';
+  f.srcdoc = doc;
+  document.getElementById('game').appendChild(f);
+}
+go.addEventListener('click', async () => {
+  const f = rom.files[0]; if (!f) return;
+  try {
+    const r = await normalizeRom(f);
+    launch(r.blob, sys.value, prettyName(f.name));
+  } catch(e){ alert(e.message); }
+});
+
+/* ---- Saved library (IndexedDB, stays on this device) ---- */
+const db = new Promise((res, rej) => {
+  const r = indexedDB.open('fontaine-library', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('games', {keyPath:'id', autoIncrement:true});
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+const tx = async (mode, fn) => { const d = await db; return new Promise((res, rej) => {
+  const t = d.transaction('games', mode), st = t.objectStore('games'), q = fn(st);
+  t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); }); };
+
+function guessSystem(fname){
+  const n = fname.toLowerCase();
+  if (/\.gba$/.test(n)) return 'gba';
+  if (/\.(gb|gbc)$/.test(n)) return 'gb';
+  if (/\.nds$/.test(n)) return 'nds';
+  if (/\.nes$/.test(n)) return 'nes';
+  if (/\.(sfc|smc)$/.test(n)) return 'snes';
+  if (/\.(z64|n64|v64)$/.test(n)) return 'n64';
+  if (/ruby|sapphire|emerald|firered|leafgreen/.test(n)) return 'gba';
+  if (/(red|blue|yellow|gold|silver|crystal)[ _]version/.test(n)) return 'gb';
+  return 'gba';
+}
+const prettyName = f => f.replace(/\.[^.]+$/, '').replace(/_/g, ' ').replace(/^Pokemon - /i, 'Pokémon ').replace(/ ?\([^)]*\)/g, '').trim();
+const ICONS = {gba:'🎮', gb:'🕹️', nds:'📱', nes:'👾', snes:'👾'};
+
+async function renderLib(){
+  const games = await tx('readonly', st => st.getAll());
+  const el = document.getElementById('lib'); el.innerHTML = '';
+  if (!games.length) { el.innerHTML = '<div class="card empty"><div><h3>Nothing here yet</h3><p>Add game files above and they will show up here.</p></div></div>'; return; }
+  games.forEach(g => {
+    const c = document.createElement('div'); c.className = 'card';
+    c.innerHTML = '<div class="art"></div><div class="meta"><h3></h3><p></p><div style="display:flex;gap:.5rem;margin-top:.7rem"><button class="btn play">Play</button><button class="btn ghost del">Remove</button></div></div>';
+    c.querySelector('.art').textContent = ICONS[g.system] || '🎮';
+    c.querySelector('h3').textContent = g.title;
+    c.querySelector('p').textContent = g.system.toUpperCase();
+    c.querySelector('.play').onclick = () => launch(g.blob, g.system, g.title);
+    c.querySelector('.del').onclick = async () => { await tx('readwrite', st => st.delete(g.id)); renderLib(); };
+    el.appendChild(c);
+  });
+}
+document.getElementById('addrom').addEventListener('change', async e => {
+  const pick = document.getElementById('addsys').value;
+  for (const f of e.target.files) {
+    try {
+      const r = await normalizeRom(f);
+      await tx('readwrite', st => st.add({title: prettyName(f.name), system: pick === 'auto' ? guessSystem(r.name !== f.name ? r.name : f.name) : pick, blob: r.blob}));
+    } catch(err){ alert(err.message); }
+  }
+  e.target.value = ''; renderLib();
+});
+renderLib();
+
+(async () => {
+  const ok = v => v ? 'yes' : 'NO';
+  let store = false; try { await db; store = true; } catch(e){}
+  let sab = typeof SharedArrayBuffer !== 'undefined';
+  document.getElementById('check').textContent =
+    'Browser check: WebAssembly ' + ok(typeof WebAssembly === 'object') + ' | Saved storage ' + ok(store) +
+    ' | Audio ' + ok(window.AudioContext || window.webkitAudioContext) + ' | WebGL ' + ok(!!document.createElement('canvas').getContext('webgl'));
+})();
+
+exitBtn.addEventListener('click', () => location.reload());
+</script>
+</body>
+</html>
