@@ -535,9 +535,9 @@ exitBtn.addEventListener('click', () => location.reload());
 
 // Website tiles above the games. Public Invidious sites come and go, so if this one stops working,
 // pick another from https://docs.invidious.io/instances/ and paste its address here.
-const INVIDIOUS_URL = 'https://invidious.tiekoetter.com';
+const INVIDIOUS_URL = 'https://invidious.io/';
 document.getElementById('siteInv').href = INVIDIOUS_URL;
-document.querySelector('#siteInv small').textContent = new URL(INVIDIOUS_URL).hostname;
+document.querySelector('#siteInv small').textContent = 'Pick a site to use';
 
 // Websites open inside the page, in the same full-screen frame the games use.
 // (A few sites refuse to be shown inside another page; if one stays blank, use "Open in new tab".)
