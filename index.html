@@ -51,7 +51,7 @@ button.card:hover .art img{transform:scale(1.04)}
 label{display:block;font-weight:700;font-size:.9rem;margin-bottom:.3rem}
 select,input[type=file]{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.55rem .75rem;max-width:100%}
 .note{font-size:.88rem;color:var(--muted);margin:1rem 0 0}
-#stage{display:none;position:fixed;inset:0;z-index:20;background:#000}
+#stage{display:none;position:fixed;inset:0;z-index:20;background:#000;touch-action:none;overscroll-behavior:none}
 #stage.on{display:block}
 #game{width:100%;height:100%;position:relative;z-index:2}
 #status{position:absolute;inset:0;z-index:1;display:grid;place-content:center;text-align:center;padding:2rem;color:#b4c6e3;font-size:1.1rem;background:#13284f}
@@ -264,6 +264,7 @@ async function launchHtmlXz(path, title){
     const f = document.createElement('iframe');
     f.setAttribute('allow', 'autoplay; fullscreen');
     f.setAttribute('allowfullscreen', '');
+    f.setAttribute('scrolling', 'no');
     f.style.cssText = 'width:100%;height:100%;border:0;background:#000';
     f.src = url;
     document.getElementById('game').appendChild(f);
@@ -282,18 +283,39 @@ function launchHtml(doc){
   document.getElementById('game').appendChild(f);
 }
 const RUFFLE = 'https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.7.1/ruffle.js';
+// On-screen controls for Flash games on touch devices (iPad / iPhone), which have no keyboard
+const SWF_TOUCH_CSS =
+  '#tc{position:fixed;left:0;right:0;bottom:0;height:0;z-index:9;pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}' +
+  '#tc .b{position:fixed;bottom:max(18px,env(safe-area-inset-bottom));width:84px;height:84px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4);color:#fff;font:700 34px/80px sans-serif;text-align:center;pointer-events:auto;touch-action:none}' +
+  '#tc .b.on{background:rgba(255,255,255,.45)}' +
+  '#tc .l{left:max(18px,env(safe-area-inset-left))}#tc .r{left:calc(max(18px,env(safe-area-inset-left)) + 100px)}#tc .j{right:max(18px,env(safe-area-inset-right));width:104px;height:104px;font-size:26px;line-height:100px}';
+const SWF_TOUCH_JS =
+  'var KEYS={l:["ArrowLeft","ArrowLeft",37],r:["ArrowRight","ArrowRight",39],j:[" ","Space",32]};' +
+  'function press(k,down){var d=KEYS[k],p=window.__p;if(!p)return;try{if(down)p.focus()}catch(e){}' +
+  'var e=new KeyboardEvent(down?"keydown":"keyup",{key:d[0],code:d[1],bubbles:true,cancelable:true,composed:true});' +
+  'try{Object.defineProperty(e,"keyCode",{get:function(){return d[2]}});Object.defineProperty(e,"which",{get:function(){return d[2]}})}catch(_){}' +
+  'p.dispatchEvent(e)}' +
+  'function bind(id){var el=document.getElementById(id);' +
+  'el.addEventListener("pointerdown",function(ev){ev.preventDefault();try{el.setPointerCapture(ev.pointerId)}catch(_){}el.classList.add("on");press(id,true)});' +
+  '["pointerup","pointercancel","lostpointercapture"].forEach(function(t){el.addEventListener(t,function(){if(el.classList.contains("on")){el.classList.remove("on");press(id,false)}})});}' +
+  'if(navigator.maxTouchPoints>0||"ontouchstart" in window){document.getElementById("tc").style.display="block";["l","r","j"].forEach(bind)}' +
+  'document.addEventListener("touchmove",function(e){e.preventDefault()},{passive:false});' +
+  '["gesturestart","gesturechange","dblclick"].forEach(function(t){document.addEventListener(t,function(e){e.preventDefault()},{passive:false})});';
+
 function launchSwf(blob, name){
   stage.classList.add('on'); exitBtn.classList.add('on');
   document.getElementById('status').style.display = 'none';
   const url = URL.createObjectURL(blob);
-  const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
-    '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}</style>' +
-    '<script>window.RufflePlayer={config:{autoplay:"auto",unmuteOverlay:"hidden",letterbox:"on",contextMenu:"off"}};<\/script>' +
+  const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">' +
+    '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden;overscroll-behavior:none;touch-action:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}' + SWF_TOUCH_CSS + '</style>' +
+    '<script>window.RufflePlayer={config:{autoplay:"on",unmuteOverlay:"hidden",letterbox:"on",contextMenu:"off",splashScreen:false}};<\/script>' +
     '<script src="' + RUFFLE + '"><\/script></head><body>' +
-    '<script>window.addEventListener("load",function(){var p=window.RufflePlayer.newest().createPlayer();p.style.width="100%";p.style.height="100%";document.body.appendChild(p);p.load({url:' + JSON.stringify(url) + '});});<\/script></body></html>';
+    '<div id="tc" style="display:none"><div class="b l" id="l">&#9664;</div><div class="b r" id="r">&#9654;</div><div class="b j" id="j">JUMP</div></div>' +
+    '<script>window.addEventListener("load",function(){var p=window.RufflePlayer.newest().createPlayer();p.style.width="100%";p.style.height="100%";window.__p=p;document.body.insertBefore(p,document.body.firstChild);p.load({url:' + JSON.stringify(url) + '});});' + SWF_TOUCH_JS + '<\/script></body></html>';
   const f = document.createElement('iframe');
   f.setAttribute('allow', 'autoplay; fullscreen; gamepad');
   f.setAttribute('allowfullscreen', '');
+  f.setAttribute('scrolling', 'no');
   f.style.cssText = 'width:100%;height:100%;border:0;background:#000';
   f.srcdoc = doc;
   document.getElementById('game').appendChild(f);
