@@ -16,6 +16,8 @@ body{margin:0;font-family:'Nunito',system-ui,sans-serif;color:var(--text);backgr
 h1,h2,h3,.logo{font-family:'Cinzel',Georgia,serif;letter-spacing:.03em}
 a{color:inherit}
 :focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.sites{display:flex;flex-wrap:wrap;justify-content:center;gap:.6rem;margin:0 0 1.6rem}.site{display:flex;align-items:center;gap:.65rem;padding:.55rem .9rem;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);text-decoration:none;flex:0 1 15rem;min-width:11rem;transition:border-color .15s,transform .15s}.site:hover,.site:focus-visible{border-color:var(--accent);transform:translateY(-1px)}#newtab{position:fixed;top:.7rem;right:8.2rem;z-index:30;display:none}#newtab.on{display:block}
+.site .ic{display:grid;place-items:center;width:2.1rem;height:2.1rem;border-radius:9px;background:var(--bg);font-size:1.15rem}.site b{display:block;font-size:.95rem;line-height:1.2}.site small{color:var(--muted);font-size:.75rem}
 header{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;padding:1rem clamp(1rem,5vw,3rem);border-bottom:1px solid var(--line)}
 .logo{font-size:1.25rem;font-weight:700;text-decoration:none}
 .logo span{color:var(--gold)}
@@ -82,6 +84,10 @@ footer{text-align:center;padding:1.5rem 1rem;border-top:1px solid var(--line);co
   <section id="games">
     <h2>The Collection</h2>
     <p class="lead">Hand-picked and ad-free. Tap a cover to start playing.</p>
+    <div class="sites" id="sites">
+      <a class="site" id="siteInv" data-name="Invidious"><span class="ic">▶️</span><span><b>Invidious</b><small>Ad-free video site</small></span></a>
+      <a class="site" href="https://www.coolmathgames.com" data-name="Coolmath Games"><span class="ic">🧮</span><span><b>Coolmath Games</b><small>coolmathgames.com</small></span></a>
+    </div>
     <div id="shelf"></div>
   </section>
 
@@ -144,6 +150,7 @@ footer{text-align:center;padding:1.5rem 1rem;border-top:1px solid var(--line);co
 
 <div id="stage"><div id="status">Loading emulator…<br><small>Needs internet. If this stays here for more than 20 seconds, tap Exit game.</small></div><div id="game"></div></div>
 <button class="btn" id="exit">Exit game</button>
+<a class="btn ghost" id="newtab" target="_blank" rel="noopener noreferrer">Open in new tab ↗</a>
 
 <script>
 /* ---- Finding ROMs whatever they are called ---- */
@@ -525,6 +532,29 @@ renderLib();
 })();
 
 exitBtn.addEventListener('click', () => location.reload());
+
+// Website tiles above the games. Public Invidious sites come and go, so if this one stops working,
+// pick another from https://docs.invidious.io/instances/ and paste its address here.
+const INVIDIOUS_URL = 'https://invidious.f5.si';
+document.getElementById('siteInv').href = INVIDIOUS_URL;
+document.querySelector('#siteInv small').textContent = new URL(INVIDIOUS_URL).hostname;
+
+// Websites open inside the page, in the same full-screen frame the games use.
+// (A few sites refuse to be shown inside another page; if one stays blank, use "Open in new tab".)
+function launchSite(url){
+  stage.classList.add('on'); exitBtn.classList.add('on');
+  stage.style.touchAction = 'auto'; stage.style.overscrollBehavior = 'auto';
+  document.getElementById('status').style.display = 'none';
+  const nt = document.getElementById('newtab'); nt.href = url; nt.classList.add('on');
+  const f = document.createElement('iframe');
+  f.setAttribute('allow', 'autoplay; fullscreen; encrypted-media; picture-in-picture');
+  f.setAttribute('allowfullscreen', '');
+  f.setAttribute('referrerpolicy', 'no-referrer');
+  f.style.cssText = 'width:100%;height:100%;border:0;background:#fff;touch-action:auto';
+  f.src = url;
+  document.getElementById('game').appendChild(f);
+}
+document.querySelectorAll('#sites .site').forEach(a => a.addEventListener('click', e => { e.preventDefault(); launchSite(a.href); }));
 </script>
 </body>
 </html>
