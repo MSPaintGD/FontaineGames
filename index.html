@@ -459,7 +459,7 @@ function launch(blob, system, name, core){
   const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#game{width:100%;height:100%}</style></head><body><div id="game"></div>' +
     '<script>try{if(navigator.wakeLock)navigator.wakeLock.request=function(){return Promise.resolve({release:function(){}})}}catch(e){}\n' +
-    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];<\/script>' +
+    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];window.EJS_onGameStart=function(){try{parent.__ejsStart()}catch(e){}};<\/script>' +
     '<script src="' + cfg.EJS_pathtodata + 'loader.js"><\/script></body></html>';
   const f = document.createElement('iframe');
   f.setAttribute('allow', 'autoplay; fullscreen; gamepad');
@@ -644,6 +644,20 @@ const T=['Quick edit','Value finder','Hex editor','Backup / import'];
 T.forEach((n,i)=>{const x=document.createElement('button');x.className='btn ghost';x.textContent=n;x.onclick=()=>{tabs(i)};$('#set').appendChild(x)});
 const open=()=>{se.classList.add('on');M=null;load();tabs(0)};
 btn.onclick=open;$('#sex').onclick=()=>se.classList.remove('on');$('#seap').onclick=apply;$('#serl').onclick=()=>{load();tabs(0)};
+/* ---- Reliable saves: keep our own copy of the game's save, restore it on launch ---- */
+const sdb=new Promise((res,rej)=>{const r=indexedDB.open('fontaine-saves',1);r.onupgradeneeded=()=>r.result.createObjectStore('s');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+const sget=async k=>{const d=await sdb;return new Promise(r=>{const q=d.transaction('s').objectStore('s').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()})};
+const sput=async(k,v)=>{const d=await sdb;return new Promise(r=>{const t=d.transaction('s','readwrite');t.objectStore('s').put(v,k);t.oncomplete=()=>r(1);t.onerror=()=>r(0)})};
+let live=false,last='';
+const sig=a=>a.length+':'+a.reduce((s,x,i)=>(s+x*(i%251+1))%1000000007,0);
+async function persist(){const e=emu();if(!live||!e||!cur.name)return;let d;try{d=e.gameManager.getSaveFile()}catch(x){}
+  if(!d||!d.length||d.every(x=>x===d[0]))return;const u=new Uint8Array(d),g=sig(u);if(g===last)return;await sput(cur.name,u);last=g}
+window.__ejsStart=async()=>{live=false;last='';const e=emu();if(!e||!cur.name)return;
+  try{const s=await sget(cur.name);if(s&&s.length){const g=e.gameManager;g.FS.writeFile(g.getSaveFilePath(),s);g.loadSaveFiles();last=sig(s)}}catch(x){}live=true};
+setInterval(persist,4000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)persist()});addEventListener('pagehide',persist);
+exitBtn.addEventListener('click',async ev=>{ev.stopImmediatePropagation();try{await persist()}catch(x){}location.reload()},true);
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(x){}
 const _l=launch;launch=function(b,s,n,c){cur={name:n||'',sys:s};_l(b,s,n,c);btn.classList.add('on')};
 })();
 </script>
