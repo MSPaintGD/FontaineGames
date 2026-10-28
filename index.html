@@ -443,7 +443,24 @@ function launchSwf(blob, name){
   f.srcdoc = doc;
   document.getElementById('game').appendChild(f);
 }
-function launch(blob, system, name, core){
+function saveHooks(key, system){
+  const iv = (system === 'n64' || system === 'nds') ? 90000 : 30000;
+  return 'var K=' + JSON.stringify(key) + ',T0=Date.now();' +
+  'function P(s){try{if(!s||!s.length)return;s=new Uint8Array(s);return parent.FSAVE.put(K,{state:s,t:Date.now()})}catch(e){}}' +
+  'function G(){try{var m=window.EJS_emulator;if(!m||!m.gameManager||m.started===false||Date.now()-T0<8000)return;return m.gameManager.getState()}catch(e){}}' +
+  'window.__ejsSave=function(){return P(G())};' +
+  'window.EJS_onSaveState=function(e){P(e&&(e.state||e[1]))};' +
+  'setInterval(window.__ejsSave,' + iv + ');' +
+  'addEventListener("visibilitychange",function(){if(document.hidden)window.__ejsSave()});' +
+  'addEventListener("pagehide",function(){window.__ejsSave()});';
+}
+async function launch(blob, system, name, core){
+  const saveKey = system + '|' + name; let resumeUrl = null;
+  if (system !== 'flash') { try {
+    const sv = await FSAVE.get(saveKey);
+    if (sv && sv.state && sv.state.length && confirm('Continue where you left off in ' + name + '?\n\nOK = continue, Cancel = start fresh'))
+      resumeUrl = URL.createObjectURL(new Blob([sv.state]));
+  } catch(e){} }
   if (system === 'flash') return launchSwf(blob, name);
   stage.classList.add('on'); exitBtn.classList.add('on');
   document.getElementById('status').style.display = 'none';
@@ -453,13 +470,13 @@ function launch(blob, system, name, core){
   const url = URL.createObjectURL(blob) + '#' + encodeURIComponent(name) + '.' + (isZip ? 'zip' : ext);
   const cfg = {
     EJS_player: '#game', EJS_core: core || CORES[system], EJS_gameUrl: url, EJS_gameName: name,
-    EJS_pathtodata: 'https://cdn.emulatorjs.org/stable/data/', EJS_startOnLoaded: true, EJS_threads: false
+    EJS_pathtodata: 'https://cdn.emulatorjs.org/stable/data/', EJS_startOnLoaded: true, EJS_threads: false, ...(resumeUrl ? {EJS_loadStateURL: resumeUrl} : {})
   };
   // Run the emulator in its own iframe so nothing on this page can interfere with it
   const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#game{width:100%;height:100%}</style></head><body><div id="game"></div>' +
     '<script>try{if(navigator.wakeLock)navigator.wakeLock.request=function(){return Promise.resolve({release:function(){}})}}catch(e){}\n' +
-    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];<\/script>' +
+    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];' + saveHooks(saveKey, system) + '<\/script>' +
     '<script src="' + cfg.EJS_pathtodata + 'loader.js"><\/script></body></html>';
   const f = document.createElement('iframe');
   f.setAttribute('allow', 'autoplay; fullscreen; gamepad');
@@ -539,7 +556,24 @@ renderLib();
     ' | Audio ' + ok(window.AudioContext || window.webkitAudioContext) + ' | WebGL ' + ok(!!document.createElement('canvas').getContext('webgl'));
 })();
 
-exitBtn.addEventListener('click', () => location.reload());
+/* ---- Saves (own IndexedDB store, independent of EmulatorJS's internal storage) ---- */
+const sdb = new Promise((res, rej) => {
+  const r = indexedDB.open('fontaine-saves', 1);
+  r.onupgradeneeded = () => r.result.createObjectStore('s');
+  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+});
+window.FSAVE = {
+  get: k => sdb.then(d => new Promise((res, rej) => { const q = d.transaction('s').objectStore('s').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })).catch(() => null),
+  put: (k, v) => sdb.then(d => new Promise((res, rej) => { const t = d.transaction('s', 'readwrite'); t.objectStore('s').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); })).catch(() => {})
+};
+try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+exitBtn.addEventListener('click', async () => {
+  try {
+    const w = document.querySelector('#game iframe');
+    if (w && w.contentWindow && w.contentWindow.__ejsSave) await Promise.race([Promise.resolve(w.contentWindow.__ejsSave()), new Promise(r => setTimeout(r, 4000))]);
+  } catch(e){}
+  location.reload();
+});
 
 // Website tiles above the games. Public Invidious sites come and go, so if this one stops working,
 // pick another from https://docs.invidious.io/instances/ and paste its address here.
