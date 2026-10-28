@@ -577,8 +577,8 @@ document.body.appendChild(se);
 const btn=document.createElement('button');btn.id='sebtn';btn.className='btn ghost';btn.textContent='Save editor';document.body.appendChild(btn);
 const $=q=>se.querySelector(q),say=t=>$('#sem').textContent=t;
 const emu=()=>{const f=document.querySelector('#game iframe'),e=f&&f.contentWindow&&f.contentWindow.EJS_emulator;return e&&e.gameManager?e:null};
-const rd=(i,n)=>{let v=0;for(let k=n-1;k>=0;k--)v=v*256+D[i+k];return v};
-const wr=(i,n,v)=>{for(let k=0;k<n;k++){D[i+k]=v%256;v=Math.floor(v/256)}};
+const rd=(i,n,A=D)=>{let v=0;for(let k=n-1;k>=0;k--)v=v*256+A[i+k];return v};
+const wr=(i,n,v,A=D)=>{for(let k=0;k<n;k++){A[i+k]=v%256;v=Math.floor(v/256)}};
 const hx=n=>n.toString(16).toUpperCase();
 function load(){const e=emu();if(!e){say('Start a game first.');return false}
   let d;try{d=e.gameManager.getSaveFile()}catch(x){}
@@ -595,6 +595,28 @@ function g3(){let best=-1,sl=0;for(const s of[0,1]){const b=s*0xE000;if(rd(b+0xF
   const sec={};for(let i=0;i<14;i++){const b=sl*0xE000+i*0x1000;sec[rd(b+0xFF4,2)]=b}return sec}
 const fix3=sec=>{for(const id in sec){const b=sec[id],n=id==0?3884:id==13?2000:3968;let s=0;for(let i=0;i<n;i+=4)s=(s+rd(b+i,4))>>>0;wr(b+0xFF6,2,((s>>>16)+(s&0xFFFF))&0xFFFF)}};
 const gen=()=>/pok.mon.*(red|blue|yellow)/i.test(cur.name)?1:/ruby|sapphire|emerald|fire.?red|leaf.?green/i.test(cur.name)?3:0;
+const N='Bulbasaur,Ivysaur,Venusaur,Charmander,Charmeleon,Charizard,Squirtle,Wartortle,Blastoise,Caterpie,Metapod,Butterfree,Weedle,Kakuna,Beedrill,Pidgey,Pidgeotto,Pidgeot,Rattata,Raticate,Spearow,Fearow,Ekans,Arbok,Pikachu,Raichu,Sandshrew,Sandslash,Nidoran F,Nidorina,Nidoqueen,Nidoran M,Nidorino,Nidoking,Clefairy,Clefable,Vulpix,Ninetales,Jigglypuff,Wigglytuff,Zubat,Golbat,Oddish,Gloom,Vileplume,Paras,Parasect,Venonat,Venomoth,Diglett,Dugtrio,Meowth,Persian,Psyduck,Golduck,Mankey,Primeape,Growlithe,Arcanine,Poliwag,Poliwhirl,Poliwrath,Abra,Kadabra,Alakazam,Machop,Machoke,Machamp,Bellsprout,Weepinbell,Victreebel,Tentacool,Tentacruel,Geodude,Graveler,Golem,Ponyta,Rapidash,Slowpoke,Slowbro,Magnemite,Magneton,Farfetchd,Doduo,Dodrio,Seel,Dewgong,Grimer,Muk,Shellder,Cloyster,Gastly,Haunter,Gengar,Onix,Drowzee,Hypno,Krabby,Kingler,Voltorb,Electrode,Exeggcute,Exeggutor,Cubone,Marowak,Hitmonlee,Hitmonchan,Lickitung,Koffing,Weezing,Rhyhorn,Rhydon,Chansey,Tangela,Kangaskhan,Horsea,Seadra,Goldeen,Seaking,Staryu,Starmie,Mr Mime,Scyther,Jynx,Electabuzz,Magmar,Pinsir,Tauros,Magikarp,Gyarados,Lapras,Ditto,Eevee,Vaporeon,Jolteon,Flareon,Porygon,Omanyte,Omastar,Kabuto,Kabutops,Aerodactyl,Snorlax,Articuno,Zapdos,Moltres,Dratini,Dragonair,Dragonite,Mewtwo,Mew,Chikorita,Bayleef,Meganium,Cyndaquil,Quilava,Typhlosion,Totodile,Croconaw,Feraligatr,Sentret,Furret,Hoothoot,Noctowl,Ledyba,Ledian,Spinarak,Ariados,Crobat,Chinchou,Lanturn,Pichu,Cleffa,Igglybuff,Togepi,Togetic,Natu,Xatu,Mareep,Flaaffy,Ampharos,Bellossom,Marill,Azumarill,Sudowoodo,Politoed,Hoppip,Skiploom,Jumpluff,Aipom,Sunkern,Sunflora,Yanma,Wooper,Quagsire,Espeon,Umbreon,Murkrow,Slowking,Misdreavus,Unown,Wobbuffet,Girafarig,Pineco,Forretress,Dunsparce,Gligar,Steelix,Snubbull,Granbull,Qwilfish,Scizor,Shuckle,Heracross,Sneasel,Teddiursa,Ursaring,Slugma,Magcargo,Swinub,Piloswine,Corsola,Remoraid,Octillery,Delibird,Mantine,Skarmory,Houndour,Houndoom,Kingdra,Phanpy,Donphan,Porygon2,Stantler,Smeargle,Tyrogue,Hitmontop,Smoochum,Elekid,Magby,Miltank,Blissey,Raikou,Entei,Suicune,Larvitar,Pupitar,Tyranitar,Lugia,Ho-Oh,Celebi'.split(',');
+const I1='99 09 9A B0 B2 B4 B1 B3 1C 7B 7C 7D 70 71 72 24 96 97 A5 A6 05 23 6C 2D 54 55 60 61 0F A8 10 03 A7 07 04 8E 52 53 64 65 6B 82 B9 BA BB 6D 2E 41 77 3B 76 4D 90 2F 80 39 75 21 14 47 6E 6F 94 26 95 6A 29 7E BC BD BE 18 9B A9 27 31 A3 A4 25 08 AD 36 40 46 74 3A 78 0D 88 17 8B 19 93 0E 22 30 81 4E 8A 06 8D 0C 0A 11 91 2B 2C 0B 37 8F 12 01 28 1E 02 5C 5D 9D 9E 1B 98 2A 1A 48 35 33 1D 3C 85 16 13 4C 66 69 68 67 AA 62 63 5A 5B AB 84 4A 4B 49 58 59 42 83 15'.split(' ').map(x=>parseInt(x,16));
+const MV={Surf:57,Earthquake:89,'Hyper Beam':63,Thunderbolt:85,'Ice Beam':58,'Fire Blast':126,Flamethrower:53,Psychic:94,Fly:19,Recover:105,Rest:156,'Swords Dance':14,'Body Slam':34,'(none)':0};
+const ORD='GAEM,GAME,GEAM,GEMA,GMAE,GMEA,AGEM,AGME,AEGM,AEMG,AMGE,AMEG,EGAM,EGMA,EAGM,EAMG,EMGA,EMAG,MGAE,MGEA,MAGE,MAEG,MEGA,MEAG'.split(',');
+const t1=s=>[...s.toUpperCase()].map(c=>{c=c.charCodeAt(0);return c>=65&&c<=90?c-65+128:c==32?127:c==45?227:null}).filter(x=>x!=null).slice(0,10);
+const t3=s=>[...s].map(c=>{const k=c.charCodeAt(0);return k>=65&&k<=90?k-65+187:k>=97&&k<=122?k-97+213:k>=48&&k<=57?k-48+161:k==32?0:k==45?174:null}).filter(x=>x!=null).slice(0,10);
+const padA=(a,n,p)=>{a=a.slice(0,n);while(a.length<n)a.push(p);return a};
+function giveUI(g){const mv=Object.keys(MV),d=['Surf','Earthquake','Hyper Beam','Thunderbolt'];
+  $('#seb').insertAdjacentHTML('beforeend','<hr><h3>Give a Pokémon</h3><div class="r"><div><label>Party slot</label><select id="gs">'+[1,2,3,4,5,6].map(i=>'<option>'+i+'</option>').join('')+'</select></div><div><label>Pokémon (name, or dex number)</label><input id="gn" list="gl" placeholder="Mewtwo"></div><div><label>Level</label><input id="gl2" type="number" value="100" style="width:5rem"></div></div><datalist id="gl">'+N.map(n=>'<option>'+n+'</option>').join('')+'</datalist><div class="r">'+d.map((m,i)=>'<select class="gm">'+mv.map(x=>'<option'+(x==m?' selected':'')+'>'+x+'</option>').join('')+'</select>').join('')+'</div><button class="btn" id="gp">Give Pokémon</button><p class="note">Gen 1 games: #1-151. Gen 3 games: #1-386 (type a number for #252+). Stats are a flat value based on level; they correct themselves when it levels up. Overwrites that slot.</p>');
+  $('#gp').onclick=()=>{const v=$('#gn').value.trim(),dex=/^\d+$/.test(v)?+v:N.findIndex(n=>n.toLowerCase()===v.toLowerCase())+1,lv=Math.max(1,Math.min(100,+$('#gl2').value||1)),sl=+$('#gs').value,mvs=[...se.querySelectorAll('.gm')].map(s=>MV[s.value]),nm=N[dex-1]||('Mon'+dex),st=Math.min(999,lv*4+30);
+    if(!dex||dex>(g==1?151:386))return say('Pick a valid Pokémon for this game.');
+    if(g==1){let c=D[0x2F2C];const n=Math.min(sl,c+1),s=n-1,o=0x2F34+s*44,ix=I1[dex-1],be=(i,x)=>{D[i]=x>>8&255;D[i+1]=x&255};
+      D.fill(0,o,o+44);D[0x2F2D+s]=ix;if(n>c){D[0x2F2C]=n;D[0x2F2D+n]=255}
+      D[o]=ix;be(o+1,st);D[o+3]=lv;D[o+7]=255;mvs.forEach((m,i)=>{D[o+8+i]=m;D[o+29+i]=m?30:0});D[o+12]=D[0x2605];D[o+13]=D[0x2606];const e=lv**3;D[o+14]=e>>16&255;be(o+15,e&65535);D[o+27]=D[o+28]=255;D[o+33]=lv;for(let k=0;k<5;k++)be(o+34+k*2,st);
+      D.set(D.slice(0x2598,0x25A3),0x303C+s*11);D.set(padA(t1(nm).concat([80]),11,0),0x307E+s*11);fix1();apply()}
+    else{const sec=g3();if(sec[0]==null||sec[1]==null)return say('Save in the game first.');const fr=/fire|leaf/i.test(cur.name),co=sec[1]+(fr?0x34:0x234),c=D[co],n=Math.min(sl,c+1),o=co+4+(n-1)*100,T=new Uint8Array(100),W=(i,k,x)=>wr(i,k,x,T),pid=(Math.random()*4294967296)>>>0,ot=rd(sec[0]+10,4),key=(pid^ot)>>>0,sp=dex>251?dex+25:dex;
+      W(0,4,pid);W(4,4,ot);T.set(padA(t3(nm),10,255),8);T[18]=2;T[19]=2;T.set(D.slice(sec[0],sec[0]+7),20);
+      const B={G:new Uint8Array(12),A:new Uint8Array(12),E:new Uint8Array(12),M:new Uint8Array(12)},w=(b,i,k,x)=>wr(i,k,x,B[b]);
+      w('G',0,2,sp);w('G',4,4,lv**3);B.G[9]=255;mvs.forEach((m,i)=>{w('A',i*2,2,m);B.A[8+i]=m?30:0});w('M',4,2,lv|4<<11);w('M',8,4,0x3FFFFFFF);
+      const dt=new Uint8Array(48);ORD[pid%24].split('').forEach((b,j)=>dt.set(B[b],j*12));let cs=0;for(let i=0;i<48;i+=2)cs+=rd(i,2,dt);W(28,2,cs&65535);
+      for(let i=0;i<48;i+=4)wr(i,4,(rd(i,4,dt)^key)>>>0,dt);T.set(dt,32);T[84]=lv;W(86,2,st);W(88,2,st);for(let k=0;k<5;k++)W(90+k*2,2,st);
+      D.set(T,o);if(n>c)D[co]=n;fix3(sec);apply()}}}
 function tabs(t){
   const b=$('#seb');
   if(t==0){const g=gen();
@@ -604,7 +626,7 @@ function tabs(t){
       const fr=/fire|leaf/i.test(cur.name),k=/emerald/i.test(cur.name)?rd(sec[0]+0xAC,4):fr?rd(sec[0]+0xF20,4):0,o=fr?0x290:0x490;
       b.innerHTML='<div class="r"><div><label>Money</label><input id="m" type="number" value="'+((rd(sec[1]+o,4)^k)>>>0)+'"></div></div><button class="btn" id="go3">Save these edits</button>';
       $('#go3').onclick=()=>{wr(sec[1]+o,4,((Math.min(999999,+$('#m').value||0)^k)>>>0));fix3(sec);apply()}}
-    else b.innerHTML='<p>No ready-made editor for this game yet. Use <b>Value finder</b> to change coins, lives, items or money in any game.</p>';}
+    else b.innerHTML='<p>No ready-made editor for this game yet. Use <b>Value finder</b> to change coins, lives, items or money in any game.</p>';if((g==1||g==3)&&D)giveUI(g)}
   if(t==1){b.innerHTML='<p class="note">Type a number you can see in the game (coins, money, lives), pick Scan. Change it in the game, save, tap Reload, type the new number and Next scan. Repeat until few matches remain, then edit them.</p><div class="r"><div><label>Value</label><input id="fv" type="number"></div><div><label>Size</label><select id="fs"><option value="1">1 byte</option><option value="2" selected>2 bytes</option><option value="4">4 bytes</option></select></div><button class="btn" id="sc">Scan</button><button class="btn ghost" id="nx">Next scan</button><button class="btn ghost" id="rs">Reset</button></div><div id="res"></div>';
     const show=()=>{const r=$('#res');if(!M){r.textContent='';return}r.innerHTML='<p>'+M.a.length+' matches'+(M.a.length>30?' (showing 30)':'')+'</p><table>'+M.a.slice(0,30).map(a=>'<tr><td>0x'+hx(a)+'</td><td>now '+rd(a,M.n)+'</td><td><input size="9" type="number" data-a="'+a+'" placeholder="new"></td></tr>').join('')+'</table>';
       r.querySelectorAll('input').forEach(i=>i.onchange=()=>{if(i.value!=='')wr(+i.dataset.a,M.n,Math.max(0,Math.floor(+i.value)));say('Edited. Tap Apply changes to game.')})};
