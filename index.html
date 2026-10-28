@@ -443,24 +443,7 @@ function launchSwf(blob, name){
   f.srcdoc = doc;
   document.getElementById('game').appendChild(f);
 }
-function saveHooks(key, system){
-  const iv = (system === 'n64' || system === 'nds') ? 90000 : 30000;
-  return 'var K=' + JSON.stringify(key) + ',T0=Date.now();' +
-  'function P(s){try{if(!s||!s.length)return;s=new Uint8Array(s);return parent.FSAVE.put(K,{state:s,t:Date.now()})}catch(e){}}' +
-  'function G(){try{var m=window.EJS_emulator;if(!m||!m.gameManager||m.started===false||Date.now()-T0<8000)return;return m.gameManager.getState()}catch(e){}}' +
-  'window.__ejsSave=function(){return P(G())};' +
-  'window.EJS_onSaveState=function(e){P(e&&(e.state||e[1]))};' +
-  'setInterval(window.__ejsSave,' + iv + ');' +
-  'addEventListener("visibilitychange",function(){if(document.hidden)window.__ejsSave()});' +
-  'addEventListener("pagehide",function(){window.__ejsSave()});';
-}
-async function launch(blob, system, name, core){
-  const saveKey = system + '|' + name; let resumeUrl = null;
-  if (system !== 'flash') { try {
-    const sv = await FSAVE.get(saveKey);
-    if (sv && sv.state && sv.state.length && confirm('Continue where you left off in ' + name + '?\n\nOK = continue, Cancel = start fresh'))
-      resumeUrl = URL.createObjectURL(new Blob([sv.state]));
-  } catch(e){} }
+function launch(blob, system, name, core){
   if (system === 'flash') return launchSwf(blob, name);
   stage.classList.add('on'); exitBtn.classList.add('on');
   document.getElementById('status').style.display = 'none';
@@ -470,13 +453,13 @@ async function launch(blob, system, name, core){
   const url = URL.createObjectURL(blob) + '#' + encodeURIComponent(name) + '.' + (isZip ? 'zip' : ext);
   const cfg = {
     EJS_player: '#game', EJS_core: core || CORES[system], EJS_gameUrl: url, EJS_gameName: name,
-    EJS_pathtodata: 'https://cdn.emulatorjs.org/stable/data/', EJS_startOnLoaded: true, EJS_threads: false, ...(resumeUrl ? {EJS_loadStateURL: resumeUrl} : {})
+    EJS_pathtodata: 'https://cdn.emulatorjs.org/stable/data/', EJS_startOnLoaded: true, EJS_threads: false
   };
   // Run the emulator in its own iframe so nothing on this page can interfere with it
   const doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">' +
     '<style>html,body{margin:0;height:100%;background:#000;overflow:hidden}#game{width:100%;height:100%}</style></head><body><div id="game"></div>' +
     '<script>try{if(navigator.wakeLock)navigator.wakeLock.request=function(){return Promise.resolve({release:function(){}})}}catch(e){}\n' +
-    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];' + saveHooks(saveKey, system) + '<\/script>' +
+    'var c=' + JSON.stringify(cfg) + ';for(var k in c)window[k]=c[k];<\/script>' +
     '<script src="' + cfg.EJS_pathtodata + 'loader.js"><\/script></body></html>';
   const f = document.createElement('iframe');
   f.setAttribute('allow', 'autoplay; fullscreen; gamepad');
@@ -556,24 +539,7 @@ renderLib();
     ' | Audio ' + ok(window.AudioContext || window.webkitAudioContext) + ' | WebGL ' + ok(!!document.createElement('canvas').getContext('webgl'));
 })();
 
-/* ---- Saves (own IndexedDB store, independent of EmulatorJS's internal storage) ---- */
-const sdb = new Promise((res, rej) => {
-  const r = indexedDB.open('fontaine-saves', 1);
-  r.onupgradeneeded = () => r.result.createObjectStore('s');
-  r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
-});
-window.FSAVE = {
-  get: k => sdb.then(d => new Promise((res, rej) => { const q = d.transaction('s').objectStore('s').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })).catch(() => null),
-  put: (k, v) => sdb.then(d => new Promise((res, rej) => { const t = d.transaction('s', 'readwrite'); t.objectStore('s').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); })).catch(() => {})
-};
-try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
-exitBtn.addEventListener('click', async () => {
-  try {
-    const w = document.querySelector('#game iframe');
-    if (w && w.contentWindow && w.contentWindow.__ejsSave) await Promise.race([Promise.resolve(w.contentWindow.__ejsSave()), new Promise(r => setTimeout(r, 4000))]);
-  } catch(e){}
-  location.reload();
-});
+exitBtn.addEventListener('click', () => location.reload());
 
 // Website tiles above the games. Public Invidious sites come and go, so if this one stops working,
 // pick another from https://docs.invidious.io/instances/ and paste its address here.
@@ -597,6 +563,67 @@ function launchSite(url){
   document.getElementById('game').appendChild(f);
 }
 document.querySelectorAll('#sites .site').forEach(a => a.addEventListener('click', e => { e.preventDefault(); launchSite(a.href); }));
+</script>
+<script>
+/* ---- Save Editor: universal tools + ready-made editors (see tabs) ---- */
+(()=>{
+let D=null,cur={name:'',sys:''},M=null;
+const st=document.createElement('style');
+st.textContent='#se{display:none;position:fixed;inset:0;z-index:50;background:rgba(5,12,30,.93);overflow:auto;padding:3.5rem 1rem 2rem}#se.on{display:block}#se .box{max-width:44rem;margin:0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:1.2rem}#se h2{margin:0}#se .r{display:flex;gap:.5rem;flex-wrap:wrap;align-items:end;margin:.6rem 0}#se .btn{padding:.5rem 1rem;font-size:.95rem}#se input,#se select{font:inherit;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:.45rem .6rem;max-width:100%}#se table{width:100%;border-collapse:collapse;font:.85rem monospace}#se td{padding:.25rem;border-bottom:1px solid var(--line)}#sem{color:var(--gold);min-height:1.5em}#se pre{overflow:auto;font-size:.8rem}#sebtn{position:fixed;top:.7rem;right:7.8rem;z-index:30;display:none}#sebtn.on{display:block}';
+document.head.appendChild(st);
+const se=document.createElement('div');se.id='se';
+se.innerHTML='<div class="box"><div class="r" style="justify-content:space-between"><h2>Save Editor</h2><button class="btn ghost" id="sex">Close</button></div><div id="sem"></div><div class="r" id="set"></div><div id="seb"></div><div class="r"><button class="btn" id="seap">Apply changes to game</button><button class="btn ghost" id="serl">Reload from game</button></div><p class="note">Save in the game first (normal in-game save), then open this. Applying restarts the game; then load your save. Download a backup first if the save matters.</p></div>';
+document.body.appendChild(se);
+const btn=document.createElement('button');btn.id='sebtn';btn.className='btn ghost';btn.textContent='Save editor';document.body.appendChild(btn);
+const $=q=>se.querySelector(q),say=t=>$('#sem').textContent=t;
+const emu=()=>{const f=document.querySelector('#game iframe'),e=f&&f.contentWindow&&f.contentWindow.EJS_emulator;return e&&e.gameManager?e:null};
+const rd=(i,n)=>{let v=0;for(let k=n-1;k>=0;k--)v=v*256+D[i+k];return v};
+const wr=(i,n,v)=>{for(let k=0;k<n;k++){D[i+k]=v%256;v=Math.floor(v/256)}};
+const hx=n=>n.toString(16).toUpperCase();
+function load(){const e=emu();if(!e){say('Start a game first.');return false}
+  let d;try{d=e.gameManager.getSaveFile()}catch(x){}
+  if(!d||!d.length){D=null;say('No save data yet. Save inside the game, then tap Reload.');return false}
+  D=new Uint8Array(d);say('Loaded '+D.length+' bytes of save data.');return true}
+function apply(){const e=emu();if(!e||!D)return say('Nothing to apply.');const g=e.gameManager;
+  try{g.FS.writeFile(g.getSaveFilePath(),D);try{g.loadSaveFiles()}catch(x){}try{g.restart()}catch(x){}say('Applied. Game restarted: load your save to see the changes.')}catch(x){say('Could not write: '+x.message)}}
+/* Pokémon Red/Blue/Yellow */
+const fix1=()=>{let s=0;for(let i=0x2598;i<0x3523;i++)s=(s+D[i])&255;D[0x3523]=~s&255};
+const bcdW=(i,n,v)=>{const s=String(v).padStart(n*2,'0');for(let k=0;k<n;k++)D[i+k]=parseInt(s.substr(k*2,2),16)};
+const bcdR=(i,n)=>{let s='';for(let k=0;k<n;k++)s+=D[i+k].toString(16).padStart(2,'0');return parseInt(s,10)||0};
+/* Pokémon Ruby/Sapphire/Emerald/FireRed/LeafGreen */
+function g3(){let best=-1,sl=0;for(const s of[0,1]){const b=s*0xE000;if(rd(b+0xFF8,4)===0x08012025&&rd(b+0xFFC,4)>best){best=rd(b+0xFFC,4);sl=s}}
+  const sec={};for(let i=0;i<14;i++){const b=sl*0xE000+i*0x1000;sec[rd(b+0xFF4,2)]=b}return sec}
+const fix3=sec=>{for(const id in sec){const b=sec[id],n=id==0?3884:id==13?2000:3968;let s=0;for(let i=0;i<n;i+=4)s=(s+rd(b+i,4))>>>0;wr(b+0xFF6,2,((s>>>16)+(s&0xFFFF))&0xFFFF)}};
+const gen=()=>/pok.mon.*(red|blue|yellow)/i.test(cur.name)?1:/ruby|sapphire|emerald|fire.?red|leaf.?green/i.test(cur.name)?3:0;
+function tabs(t){
+  const b=$('#seb');
+  if(t==0){const g=gen();
+    if(g==1&&D&&D.length>=0x8000){b.innerHTML='<div class="r"><div><label>Money</label><input id="m" type="number" value="'+bcdR(0x25F3,3)+'"></div><div><label>Game Corner coins</label><input id="c" type="number" value="'+bcdR(0x2850,2)+'"></div><label><input id="bg" type="checkbox"> Give all 8 badges</label></div><button class="btn" id="go1">Save these edits</button>';
+      $('#go1').onclick=()=>{bcdW(0x25F3,3,Math.min(999999,+$('#m').value||0));bcdW(0x2850,2,Math.min(9999,+$('#c').value||0));if($('#bg').checked)D[0x2602]=255;fix1();apply()}}
+    else if(g==3&&D&&D.length>=0x1C000){const sec=g3();if(sec[0]==null||sec[1]==null){b.textContent='Could not find a valid save slot. Save in the game first.';return}
+      const fr=/fire|leaf/i.test(cur.name),k=/emerald/i.test(cur.name)?rd(sec[0]+0xAC,4):fr?rd(sec[0]+0xF20,4):0,o=fr?0x290:0x490;
+      b.innerHTML='<div class="r"><div><label>Money</label><input id="m" type="number" value="'+((rd(sec[1]+o,4)^k)>>>0)+'"></div></div><button class="btn" id="go3">Save these edits</button>';
+      $('#go3').onclick=()=>{wr(sec[1]+o,4,((Math.min(999999,+$('#m').value||0)^k)>>>0));fix3(sec);apply()}}
+    else b.innerHTML='<p>No ready-made editor for this game yet. Use <b>Value finder</b> to change coins, lives, items or money in any game.</p>';}
+  if(t==1){b.innerHTML='<p class="note">Type a number you can see in the game (coins, money, lives), pick Scan. Change it in the game, save, tap Reload, type the new number and Next scan. Repeat until few matches remain, then edit them.</p><div class="r"><div><label>Value</label><input id="fv" type="number"></div><div><label>Size</label><select id="fs"><option value="1">1 byte</option><option value="2" selected>2 bytes</option><option value="4">4 bytes</option></select></div><button class="btn" id="sc">Scan</button><button class="btn ghost" id="nx">Next scan</button><button class="btn ghost" id="rs">Reset</button></div><div id="res"></div>';
+    const show=()=>{const r=$('#res');if(!M){r.textContent='';return}r.innerHTML='<p>'+M.a.length+' matches'+(M.a.length>30?' (showing 30)':'')+'</p><table>'+M.a.slice(0,30).map(a=>'<tr><td>0x'+hx(a)+'</td><td>now '+rd(a,M.n)+'</td><td><input size="9" type="number" data-a="'+a+'" placeholder="new"></td></tr>').join('')+'</table>';
+      r.querySelectorAll('input').forEach(i=>i.onchange=()=>{if(i.value!=='')wr(+i.dataset.a,M.n,Math.max(0,Math.floor(+i.value)));say('Edited. Tap Apply changes to game.')})};
+    $('#sc').onclick=()=>{if(!D)return;const v=+$('#fv').value,n=+$('#fs').value,a=[];for(let i=0;i<=D.length-n;i++)if(rd(i,n)===v)a.push(i);M={a,n};show()};
+    $('#nx').onclick=()=>{if(!M||!load())return;const v=+$('#fv').value;M.a=M.a.filter(a=>rd(a,M.n)===v);show()};
+    $('#rs').onclick=()=>{M=null;show()};show()}
+  if(t==2){b.innerHTML='<div class="r"><div><label>Address (hex)</label><input id="ha" value="0"></div><button class="btn" id="hs">Show</button></div><pre id="hv"></pre><div class="r"><div><label>Write bytes (hex, e.g. FF 00 12)</label><input id="hw" size="22"></div><button class="btn" id="hb">Write</button></div>';
+    const sh=()=>{const a=parseInt($('#ha').value,16)||0;let s='';for(let r=0;r<4;r++){let l='';for(let c=0;c<16;c++){const i=a+r*16+c;l+=(i<D.length?D[i].toString(16).padStart(2,'0'):'--')+' '}s+=hx(a+r*16).padStart(6,'0')+'  '+l+'\n'}$('#hv').textContent=s};
+    $('#hs').onclick=()=>D&&sh();$('#hb').onclick=()=>{if(!D)return;const a=parseInt($('#ha').value,16)||0;$('#hw').value.trim().split(/\s+/).forEach((x,i)=>{if(a+i<D.length&&/^[0-9a-f]{1,2}$/i.test(x))D[a+i]=parseInt(x,16)});sh();say('Written. Tap Apply changes to game.')}}
+  if(t==3){b.innerHTML='<div class="r"><button class="btn" id="dl">Download save file</button><div><label>Replace save with a file</label><input type="file" id="up"></div></div><p class="note">Download works for any game and can be opened in outside editors (PKHeX etc.). After picking a file, tap Apply changes to game.</p>';
+    $('#dl').onclick=()=>{if(!D)return;const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([D]));a.download=(cur.name||'game')+'.sav';a.click()};
+    $('#up').onchange=async e=>{const f=e.target.files[0];if(f){D=new Uint8Array(await f.arrayBuffer());say('Loaded '+f.name+'. Tap Apply changes to game.')}}}
+}
+const T=['Quick edit','Value finder','Hex editor','Backup / import'];
+T.forEach((n,i)=>{const x=document.createElement('button');x.className='btn ghost';x.textContent=n;x.onclick=()=>{tabs(i)};$('#set').appendChild(x)});
+const open=()=>{se.classList.add('on');M=null;load();tabs(0)};
+btn.onclick=open;$('#sex').onclick=()=>se.classList.remove('on');$('#seap').onclick=apply;$('#serl').onclick=()=>{load();tabs(0)};
+const _l=launch;launch=function(b,s,n,c){cur={name:n||'',sys:s};_l(b,s,n,c);btn.classList.add('on')};
+})();
 </script>
 </body>
 </html>
