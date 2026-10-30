@@ -11,6 +11,8 @@
 	<title>Pixelsuft hl</title>
 	<script>
 		document.addEventListener('contextmenu', event => event.preventDefault());
+		var a = {play: function() {}, pause: function() {}};
+		var pashalka_count = 0;
 		window.onbeforeunload = function(e) {
 			// Cancel the event
 			e.preventDefault();
