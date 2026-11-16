@@ -597,7 +597,7 @@
 				for (var i = 0; i < parts; i++) {
 					const cur = i;
 					const no_ext = packageName.slice(0, -4);
-					const url1 = no_ext + '_out/' + no_ext + '-' + cur + '.zip';
+					const url1 = no_ext + '-' + cur + '.zip';
 					console.log(url1);
 					const xhr = new XMLHttpRequest();
 					xhr.open('GET', url1, true);
