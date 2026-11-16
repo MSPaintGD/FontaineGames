@@ -471,18 +471,20 @@
 					Module.setStatus('Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')');
 			}
 		};
-		window.onerror = function(event) {
-			if (mounted)
-				FS.syncfs(false, function(err) {
-					Module.print('Saving IDBFS: ' + err);
-				});
-			if (('' + event).indexOf('SimulateInfiniteLoop') > 0)
-				return;
-			var text = 'Exception thrown: ' + event;
-			text = text.replace(/&/g, "&amp;");
-			text = text.replace(/</g, "&lt;");
-			text = text.replace(/>/g, "&gt;");
-			text = text.replace('\n', '<br>', 'g');
+		var lastSync = 0;
+		window.onerror = function(event, source, line, col, err) {
+			// Non-string = an ErrorEvent object from a failed sub-resource/socket; log it, don't treat as a crash
+			if (event && typeof event === 'object') {
+				console.warn('Ignored ErrorEvent', event.message || event, event.filename || '', event.lineno || '');
+				return true;
+			}
+			if (('' + event).indexOf('SimulateInfiniteLoop') >= 0) return true;
+			if (mounted && Date.now() - lastSync > 5000) {
+				lastSync = Date.now();
+				try { FS.syncfs(false, function(e) { Module.print('Saving IDBFS: ' + e); }); } catch (x) {}
+			}
+			var text = 'Exception thrown: ' + event + (source ? ' (' + source + ':' + line + ')' : '');
+			text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 			Module.setStatus(text);
 			Module.print('Exception thrown: ' + event);
 		};
@@ -696,9 +698,10 @@
 		};
 
 		Module.preInit = [skipRun];
-		Module.websocket = [];
-		//Module.websocket.url = 'wsproxy://the-swank.pp.ua:3000/'
-		Module.websocket.url = 'wsproxy://4.tcp.ngrok.io:10657/';
+		// Single-player only: the old ngrok proxy is dead and every network attempt kept erroring.
+		// A constructor that throws makes Xash's socket layer return EHOSTUNREACH instead of firing async errors.
+		Module.websocket = {};
+		window.WebSocket = function() { throw new Error('networking disabled'); };
 		ENV = [];
 	</script>
 
